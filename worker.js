@@ -24,7 +24,7 @@ export default {
 
     const app = request.defaults({
       request: { hook: auth.hook },
-      mediaType: { format: 'object' }
+      mediaType: { format: 'raw' }
     })
     
     router.get("/api/:path*", async ({ params }) => {
@@ -33,16 +33,15 @@ export default {
       var res = {};
 
       if (Array.isArray(data)) {
-        res = JSON.stringify(data.map(({name, path}) => ({ name, path })))
+        res = data.map(({name, path}) => ({ name, path }))
 
         // check for item.md
-        if (data?.entries) {
-          if (data.entries.filter(i => i.name === 'item.md')) {
-            const item = data.entries.filter(i => i.name === 'item.md')[0]
-            const { data: raw } = await app(`GET /repos/adamsuk/blog/contents/${item.path}`);
-            res = { ...res, ...parseMarkdownMetadata(raw) }
+        data.name.map(async (child, i) => {
+          if (child.name.endsWith('.md')) {
+            const { data: raw } = await app(`GET /repos/adamsuk/blog/contents/${data[i].path}`);
+            res[i] = { ...res[i], ...parseMarkdownMetadata(raw) }
           }
-        }
+        })
       } else if (params.path.endsWith('.md')) {
         res = { ...parseMarkdownMetadata(data), content: data }
       }
