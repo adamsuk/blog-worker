@@ -4,6 +4,7 @@ import Router from './router';
 
 export default {
   async fetch(req, env) {
+    const url = new URL(req.url);
 
     // wrangler secrets
     const appId = env.APP_ID;
@@ -24,7 +25,7 @@ export default {
       request: { hook: auth.hook },
       mediaType: { format: 'raw' }
     })
-
+    
     router.get("/api/:path", async () => {
       const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
 
@@ -38,31 +39,21 @@ export default {
       );
     })
 
-//     router.get("/api/:path/:file", async () => {
-//       const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
+    if (url.pathname.startsWith('/api/')) {
+      return router.handle(req);
+    } else {
+      try {
+        return new Response(`{ "ok": true }`, {
+          headers: { "content-type": "application/json" },
+        });
+      } catch (error) {
+        app.log.error(error);
 
-//       return new Response(
-//         `<h1>Cloudflare Worker Example GitHub app</h1>
-
-// <p>Data: ${JSON.stringify(data)}</p>`,
-//         {
-//           headers: { "content-type": "text/html" },
-//         }
-//       );
-//     })
-
-    // Now handle the req
-    try {
-      return new Response(`{ "ok": true }`, {
-        headers: { "content-type": "application/json" },
-      });
-    } catch (error) {
-      app.log.error(error);
-
-      return new Response(`{ "error": "${error.message}" }`, {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      });
+        return new Response(`{ "error": "${error.message}" }`, {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        });
+      }
     }
   },
 };
