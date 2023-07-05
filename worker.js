@@ -29,12 +29,15 @@ export default {
     router.get("/api/:path*", async ({ params }) => {
       const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
 
-      return new Response(
-        `<h1>Cloudflare Worker Example GitHub app</h1>
+      var res = data;
 
-<p>Data: ${JSON.stringify(data)}</p>`,
+      if (Array.isArray(res)) {
+        res = res.map(({name, path}) => ({ name, path }))
+      }
+
+      return new Response(res,
         {
-          headers: { "content-type": "text/html" },
+          headers: { "content-type": "application/json" },
         }
       );
     })
