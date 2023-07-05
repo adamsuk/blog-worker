@@ -26,7 +26,7 @@ export default {
       mediaType: { format: 'raw' }
     })
     
-    router.get("/api/:path", async ({ params }) => {
+    router.get("/api/:path*", async ({ params }) => {
       const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
 
       return new Response(
