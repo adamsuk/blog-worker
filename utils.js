@@ -3,7 +3,7 @@ export const parseMarkdownMetadata = markdown => {
   // Regular expression to match metadata at the beginning of the file
   const metadataRegex = /^---([\s\S]*?)---/;
   const metadataMatch = markdown.match(metadataRegex);
-  const content = str.replace(metadataMatch, "")
+  const content = markdown.replace(metadataMatch, "")
 
   // If there is no metadata, return an empty object
   if (!metadataMatch) {
