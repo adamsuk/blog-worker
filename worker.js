@@ -32,7 +32,7 @@ export default {
       var res = data;
 
       if (Array.isArray(res)) {
-        res = res.map(({name, path}) => ({ name, path }))
+        res = JSON.stringify(res.map(({name, path}) => ({ name, path })))
       }
 
       return new Response(res,
