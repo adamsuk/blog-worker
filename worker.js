@@ -1,5 +1,6 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
+import Router from './router';
 
 export default {
   async fetch(req, env) {
