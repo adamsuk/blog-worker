@@ -40,6 +40,8 @@ export default {
           if (child.name.endsWith('.md')) {
             const { data: raw } = await app(`GET /repos/adamsuk/blog/contents/${child.path}`);
             return { ...child, ...parseMarkdownMetadata(raw) }
+          } else {
+            return child
           }
         }))
       } else if (params.path.endsWith('.md')) {
