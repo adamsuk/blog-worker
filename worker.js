@@ -32,7 +32,7 @@ export default {
 
       var res = {};
 
-      if (Array.isArray(res)) {
+      if (Array.isArray(data)) {
         res = JSON.stringify(data.map(({name, path}) => ({ name, path })))
 
         // check for item.md
