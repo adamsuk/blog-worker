@@ -9,6 +9,8 @@ export default {
     const privateKey = env.PRIVATE_KEY;
     const installationId = env.INSTALL_ID;
 
+    const router = new Router();
+
     // instantiate app
     // https://github.com/octokit/req.js/#authentication
     const auth = createAppAuth({
@@ -22,20 +24,31 @@ export default {
       mediaType: { format: 'raw' }
     })
 
-    if (req.method === "GET") {
-      const { data } = await app("GET /app");
+    router.get("/api/:path", async () => {
+      const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
 
       return new Response(
         `<h1>Cloudflare Worker Example GitHub app</h1>
 
-<p>Data: ${JSON.stringify(data)}</p>
-    
-<p><a href="https://github.com/apps/cloudflare-worker-example">Install</a> | <a href="https://github.com/gr2m/cloudflare-worker-github-app-example/#readme">source code</a></p>`,
+<p>Data: ${JSON.stringify(data)}</p>`,
         {
           headers: { "content-type": "text/html" },
         }
       );
-    }
+    })
+
+//     router.get("/api/:path/:file", async () => {
+//       const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
+
+//       return new Response(
+//         `<h1>Cloudflare Worker Example GitHub app</h1>
+
+// <p>Data: ${JSON.stringify(data)}</p>`,
+//         {
+//           headers: { "content-type": "text/html" },
+//         }
+//       );
+//     })
 
     // Now handle the req
     try {
