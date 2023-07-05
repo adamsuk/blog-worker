@@ -30,10 +30,10 @@ export default {
     router.get("/api/:path*", async ({ params }) => {
       const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`, { headers: 'application/vnd.github.v3.object' });
 
-      var res = data;
+      var res = {};
 
       if (Array.isArray(res)) {
-        res = JSON.stringify(res.map(({name, path}) => ({ name, path })))
+        res = JSON.stringify(data.map(({name, path}) => ({ name, path })))
 
         // check for item.md
         if (data?.entries && data.entries.filter(i => i.name === 'item.md')) {
@@ -41,6 +41,8 @@ export default {
           const { data: raw } = await app(`GET /repos/adamsuk/blog/contents/${item.path}`);
           res = { ...res, ...parseMarkdownMetadata(raw) }
         }
+      } else if (params.path.endsWith('.md')) {
+        res = { ...parseMarkdownMetadata(data), content: data }
       }
 
       return new Response(res,
