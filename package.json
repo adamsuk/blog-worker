@@ -5,12 +5,17 @@
   "description": "Github Blog Cloudflare Worker",
   "main": "worker.js",
   "repository": "github:adamsuk/blog-worker",
+  "type": "module",
   "dependencies": {
-    "@octokit/app": "^10.0.2"
+    "@octokit/app": "^10.0.2",
+    "@octokit/request": "^7.0.1"
   },
   "release": {
     "branches": [
       "main"
     ]
+  },
+  "devDependencies": {
+    "miniflare": "^2.14.0"
   }
 }
