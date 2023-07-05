@@ -4,6 +4,7 @@
   "private": true,
   "description": "Github Blog Cloudflare Worker",
   "main": "worker.js",
+  "repository": "github:adamsuk/blog-worker",
   "dependencies": {
     "@octokit/app": "^10.0.2"
   },
