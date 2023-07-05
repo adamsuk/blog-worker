@@ -5,6 +5,12 @@ import { parseMarkdownMetadata } from './utils';
 
 export default {
   async fetch(req, env) {
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "https://sradams.co.uk",
+      "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
+      "Access-Control-Max-Age": "86400",
+    };
+
     const url = new URL(req.url);
 
     // wrangler secrets
@@ -50,7 +56,7 @@ export default {
 
       return new Response(JSON.stringify(res),
         {
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...corsHeaders },
         }
       );
     })
@@ -60,14 +66,14 @@ export default {
     } else {
       try {
         return new Response(`{ "ok": true }`, {
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...corsHeaders },
         });
       } catch (error) {
         app.log.error(error);
 
         return new Response(`{ "error": "${error.message}" }`, {
           status: 500,
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...corsHeaders },
         });
       }
     }
