@@ -36,12 +36,12 @@ export default {
         res = data.map(({name, path}) => ({ name, path }))
 
         // check for item.md
-        res.map(async (child) => {
+        await Promise.all(res.map(async (child) => {
           if (child.name.endsWith('.md')) {
             const { data: raw } = await app(`GET /repos/adamsuk/blog/contents/${child.path}`);
             return { ...child, ...parseMarkdownMetadata(raw) }
           }
-        })
+        }))
       } else if (params.path.endsWith('.md')) {
         res = { ...parseMarkdownMetadata(data), content: data }
       }
