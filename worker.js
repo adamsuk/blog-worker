@@ -45,7 +45,7 @@ export default {
         res = { ...parseMarkdownMetadata(data), content: data }
       }
 
-      return new Response(res,
+      return new Response(JSON.stringify(res),
         {
           headers: { "content-type": "application/json" },
         }
