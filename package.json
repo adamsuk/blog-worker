@@ -1,0 +1,15 @@
+{
+  "name": "blog-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Github Blog Cloudflare Worker",
+  "main": "worker.js",
+  "dependencies": {
+    "@octokit/app": "^10.0.2"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ]
+  }
+}
