@@ -39,13 +39,13 @@ export default {
         res = await Promise.all(res.map(async (child) => {
           if (!child.name.endsWith('.md')) {
             const { data: raw = {}, status } = await app(`GET /repos/adamsuk/blog/contents/${child.path}/item.md`);
-            return status === 200 ? { ...child, ...parseMarkdownMetadata(raw), content: raw } : child
+            return status === 200 ? { ...child, ...parseMarkdownMetadata(raw) } : child
           } else {
             return child
           }
         }))
       } else if (params.path.endsWith('.md')) {
-        res = { ...parseMarkdownMetadata(data), content: data }
+        res = { ...parseMarkdownMetadata(data) }
       }
 
       return new Response(JSON.stringify(res),

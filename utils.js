@@ -3,17 +3,18 @@ export const parseMarkdownMetadata = markdown => {
   // Regular expression to match metadata at the beginning of the file
   const metadataRegex = /^---([\s\S]*?)---/;
   const metadataMatch = markdown.match(metadataRegex);
+  const content = str.replace(metadataMatch, "")
 
   // If there is no metadata, return an empty object
   if (!metadataMatch) {
-    return {};
+    return { meta: {}, content };
   }
 
   // Split the metadata into lines
   const metadataLines = metadataMatch[1].split("\n");
 
   // Use reduce to accumulate the metadata as an object
-  const metadata = metadataLines.reduce((acc, line) => {
+  const meta = metadataLines.reduce((acc, line) => {
     // Split the line into key-value pairs
     const [key, value] = line.split(":").map(part => part.trim());
     // If the line is not empty add the key-value pair to the metadata object
@@ -22,5 +23,5 @@ export const parseMarkdownMetadata = markdown => {
   }, {});
 
   // Return the metadata object
-  return metadata;
+  return { meta, content };
 };
