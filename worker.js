@@ -1,7 +1,7 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
 import Router from './router';
-import { parseMarkdownMetadata } from './utils';
+import { parseMarkdownMetadata, getMarkdown } from './utils';
 
 export default {
   async fetch(req, env) {
@@ -34,25 +34,7 @@ export default {
     })
     
     router.get("/api/:path*", async ({ params }) => {
-      const { data } = await app(`GET /repos/adamsuk/blog/contents/${params.path}`);
-
-      var res = {};
-
-      if (Array.isArray(data)) {
-        res = data.map(({name, path}) => ({ name, path }))
-
-        // check for item.md
-        res = await Promise.all(res.map(async (child) => {
-          if (!child.name.endsWith('.md')) {
-            const { data: raw = {}, status } = await app(`GET /repos/adamsuk/blog/contents/${child.path}/item.md`);
-            return status === 200 ? { ...child, ...parseMarkdownMetadata(raw) } : child
-          } else {
-            return child
-          }
-        }))
-      } else if (params.path.endsWith('.md')) {
-        res = { ...parseMarkdownMetadata(data) }
-      }
+      const res = await getMarkdown(app, params.path)
 
       return new Response(JSON.stringify(res),
         {

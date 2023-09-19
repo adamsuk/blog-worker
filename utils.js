@@ -25,3 +25,19 @@ export const parseMarkdownMetadata = markdown => {
   // Return the metadata object
   return { meta, content };
 };
+
+export const getMarkdown = async (app, path, res=[]) => {
+  const { data, status } = await app(`GET /repos/adamsuk/blog/contents/${path}`);
+
+  if (Array.isArray(data)) {
+    var children = data.map(({name, path}) => ({ name, path }))
+
+    children = await Promise.all(children.map(async (child) => {
+      return getMarkdown(app, child.path, res)
+    }))
+    return [ ...res, ...children ]
+  } else if (path.endsWith('.md')) {
+    return status === 200 ? [ ...res, ...parseMarkdownMetadata(data) ] : res
+  }
+  return res
+}
