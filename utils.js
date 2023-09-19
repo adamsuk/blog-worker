@@ -36,8 +36,8 @@ export const getMarkdown = async (app, path, res=[]) => {
       return getMarkdown(app, child.path, res)
     }))
     return [ ...res, ...children ]
-  } else if (path.endsWith('.md')) {
-    return status === 200 ? [ ...res, ...parseMarkdownMetadata(data) ] : res
+  } else if (path.endsWith('.md') && status === 200) {
+    res.push(parseMarkdownMetadata(data))
   }
   return res
 }
