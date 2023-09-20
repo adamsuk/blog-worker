@@ -1,7 +1,7 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
 import Router from './router';
-import { parseMarkdownMetadata, getMarkdown } from './utils';
+import { getMarkdown } from './utils';
 
 export default {
   async fetch(req, env) {
@@ -34,7 +34,9 @@ export default {
     })
     
     router.get("/api/:path*", async ({ params }) => {
-      const res = await getMarkdown(app, params.path)
+      var res = await getMarkdown(app, params.path)
+
+      res.sort((a, b) => b.name === 'blog.md' ? 1 : a.path.localeCompare(b.path));
 
       return new Response(JSON.stringify(res),
         {
