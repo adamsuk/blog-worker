@@ -21,6 +21,7 @@ export const parseMarkdownMetadata = markdown => {
   return { meta, content };
 };
 
+// Recursive method of obtaining markdown files from a repo
 export const getMarkdown = async (app, path, res=[], obj={}) => {
   const { data, status } = await app(`GET /repos/adamsuk/blog/contents/${path}`);
 
