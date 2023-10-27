@@ -13,7 +13,9 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v3
-      - run: node --version
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20
       - run: npm install
       - name: Deploy
         uses: cloudflare/wrangler-action@v3

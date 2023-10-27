@@ -6,7 +6,7 @@ import { getMarkdown } from "./utils";
 export default {
   async fetch(req, env) {
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "https://sradams.co.uk",
+      "Access-Control-Allow-Origin": env.UI_URL,
       "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
       "Access-Control-Max-Age": "86400",
     };
