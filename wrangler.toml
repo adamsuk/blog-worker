@@ -6,5 +6,5 @@ main = "worker.js"
 compatibility_date = "2020-12-17"
 node_compat = true
 
-[env.production.vars]
+[vars]
 UI_URL = "https://sradams.co.uk"
