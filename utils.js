@@ -21,25 +21,32 @@ export const parseMarkdownMetadata = (markdown) => {
   return { meta, content };
 };
 
-// Recursive method of obtaining markdown files from a repo
-export const getMarkdown = async (app, path, res = [], obj = {}) => {
+// Fetch markdown files from the flat notes/ directory in dendron-daily, filtered by prefix
+export const getMarkdown = async (app, prefix, res = []) => {
   const { data, status } = await app(
-    `GET /repos/adamsuk/dendron-daily/contents/${path}`
+    `GET /repos/adamsuk/dendron-daily/contents/notes`
   );
 
   if (Array.isArray(data)) {
-    var children = data.map(({ name, path }) => ({ name, path }));
-
-    children = await Promise.all(
-      children.map(async (child) => {
-        return getMarkdown(app, child.path, res, child);
+    const matching = data.filter(
+      ({ name }) =>
+        (prefix ? name.startsWith(`${prefix}.`) : true) && name.endsWith(".md")
+    );
+    await Promise.all(
+      matching.map(async ({ name, path }) => {
+        const { data: fileData, status: fileStatus } = await app(
+          `GET /repos/adamsuk/dendron-daily/contents/${path}`
+        );
+        if (fileStatus === 200) {
+          const parsed = parseMarkdownMetadata(fileData);
+          if (parsed.meta && parsed.meta.public === true) {
+            const slug = parsed.meta.slug || name.replace(/\.md$/, "");
+            res.push({ name, path, slug, ...parsed });
+          }
+        }
       })
     );
-  } else if (path.endsWith(".md") && status === 200) {
-    const parsed = parseMarkdownMetadata(data);
-    if (parsed.meta && parsed.meta.public === true) {
-      res.push({ ...obj, ...parsed });
-    }
   }
+
   return res;
 };
