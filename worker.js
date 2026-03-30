@@ -34,13 +34,20 @@ export default {
     });
 
     router.get("/api/:path*", async ({ params }) => {
-      var res = await getMarkdown(app, params.path);
+      try {
+        var res = await getMarkdown(app, params.path);
 
-      res.sort((a, b) => a.path.localeCompare(b.path));
+        res.sort((a, b) => a.path.localeCompare(b.path));
 
-      return new Response(JSON.stringify(res), {
-        headers: { "content-type": "application/json", ...corsHeaders },
-      });
+        return new Response(JSON.stringify(res), {
+          headers: { "content-type": "application/json", ...corsHeaders },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "content-type": "application/json", ...corsHeaders },
+        });
+      }
     });
 
     if (url.pathname.startsWith("/api/")) {
