@@ -24,7 +24,7 @@ export const parseMarkdownMetadata = (markdown) => {
 // Recursive method of obtaining markdown files from a repo
 export const getMarkdown = async (app, path, res = [], obj = {}) => {
   const { data, status } = await app(
-    `GET /repos/adamsuk/blog/contents/${path}`
+    `GET /repos/adamsuk/dendron-daily/contents/${path}`
   );
 
   if (Array.isArray(data)) {
@@ -36,7 +36,10 @@ export const getMarkdown = async (app, path, res = [], obj = {}) => {
       })
     );
   } else if (path.endsWith(".md") && status === 200) {
-    res.push({ ...obj, ...parseMarkdownMetadata(data) });
+    const parsed = parseMarkdownMetadata(data);
+    if (parsed.meta && parsed.meta.public === true) {
+      res.push({ ...obj, ...parsed });
+    }
   }
   return res;
 };
