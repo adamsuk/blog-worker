@@ -35,24 +35,65 @@ export default {
 
     router.get("/api/:path*", async ({ params }) => {
       try {
-        const { items, sortDir } = await getMarkdown(app, params.path);
+        const { items, sortDirMap } = await getMarkdown(app, params.path);
+        const prefix = params.path;
+
+        // Returns the first path segment below the base prefix (the "root section"),
+        // and whether this item IS that section header (a direct child of prefix).
+        // e.g. prefix="cv", name="cv.experience.job1.md"
+        //   → { rootSection: "experience", isDirectChild: false }
+        // e.g. prefix="cv", name="cv.experience.md"
+        //   → { rootSection: "experience", isDirectChild: true }
+        function segInfo(name) {
+          const noMd = name.slice(0, -3);
+          const after = prefix ? noMd.slice(prefix.length + 1) : noMd;
+          const dot = after.indexOf(".");
+          return dot === -1
+            ? { rootSection: after, isDirectChild: true }
+            : { rootSection: after.slice(0, dot), isDirectChild: false };
+        }
+
+        function orderCmp(aOrder, bOrder, aItem, bItem) {
+          if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
+          if (aOrder !== null) return -1;
+          if (bOrder !== null) return 1;
+          return aItem.path.localeCompare(bItem.path);
+        }
 
         items.sort((a, b) => {
-          const aOrder = a.meta?.order ?? null;
-          const bOrder = b.meta?.order ?? null;
+          const ai = segInfo(a.name);
+          const bi = segInfo(b.name);
 
-          let cmp;
-          if (aOrder !== null && bOrder !== null) {
-            cmp = aOrder - bOrder;
-          } else if (aOrder !== null) {
-            cmp = -1;
-          } else if (bOrder !== null) {
-            cmp = 1;
-          } else {
-            cmp = a.path.localeCompare(b.path);
+          if (ai.rootSection !== bi.rootSection) {
+            // Cross-section: sort sections by their own order field
+            const aKey = prefix ? `${prefix}.${ai.rootSection}` : ai.rootSection;
+            const bKey = prefix ? `${prefix}.${bi.rootSection}` : bi.rootSection;
+            const aOrder = sortDirMap[aKey]?.order ?? null;
+            const bOrder = sortDirMap[bKey]?.order ?? null;
+            const topDir = sortDirMap[prefix]?.sort || "asc";
+            const cmp = orderCmp(aOrder, bOrder, a, b);
+            return topDir === "desc" ? -cmp : cmp;
           }
 
-          return sortDir === "desc" ? -cmp : cmp;
+          // Same section: section header always appears before its children
+          if (ai.isDirectChild !== bi.isDirectChild) {
+            return ai.isDirectChild ? -1 : 1;
+          }
+
+          // Same section, same depth: sort by order using this section's sort direction
+          const sectionKey = prefix
+            ? `${prefix}.${ai.rootSection}`
+            : ai.rootSection;
+          const dir = ai.isDirectChild
+            ? sortDirMap[prefix]?.sort || "asc"
+            : sortDirMap[sectionKey]?.sort || "asc";
+          const cmp = orderCmp(
+            a.meta?.order ?? null,
+            b.meta?.order ?? null,
+            a,
+            b
+          );
+          return dir === "desc" ? -cmp : cmp;
         });
 
         return new Response(JSON.stringify(items), {
