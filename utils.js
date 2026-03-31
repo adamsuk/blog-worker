@@ -28,6 +28,7 @@ export const getMarkdown = async (app, prefix, res = []) => {
   );
 
   let sortDir = "asc";
+  let sortDirSource = "default";
 
   if (Array.isArray(data)) {
     // Check parent file (e.g. cv.experience.md) for sort direction
@@ -41,6 +42,7 @@ export const getMarkdown = async (app, prefix, res = []) => {
           const parentParsed = parseMarkdownMetadata(parentData);
           if (parentParsed.meta?.sort) {
             sortDir = parentParsed.meta.sort;
+            sortDirSource = "parent-file";
           }
         }
       }
@@ -66,5 +68,5 @@ export const getMarkdown = async (app, prefix, res = []) => {
     );
   }
 
-  return { items: res, sortDir };
+  return { items: res, sortDir, sortDirSource };
 };

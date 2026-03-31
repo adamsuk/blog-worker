@@ -35,7 +35,7 @@ export default {
 
     router.get("/api/:path*", async ({ params }) => {
       try {
-        const { items, sortDir } = await getMarkdown(app, params.path);
+        const { items, sortDir, sortDirSource } = await getMarkdown(app, params.path);
 
         items.sort((a, b) => {
           const aOrder = a.meta?.order ?? null;
@@ -56,7 +56,12 @@ export default {
         });
 
         return new Response(JSON.stringify(items), {
-          headers: { "content-type": "application/json", ...corsHeaders },
+          headers: {
+            "content-type": "application/json",
+            "x-sort-dir": sortDir,
+            "x-sort-dir-source": sortDirSource,
+            ...corsHeaders,
+          },
         });
       } catch (error) {
         return new Response(JSON.stringify({ error: error.message }), {
