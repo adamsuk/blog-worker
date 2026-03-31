@@ -27,25 +27,12 @@ export const getMarkdown = async (app, prefix, res = []) => {
     `GET /repos/adamsuk/dendron-daily/contents/notes`
   );
 
-  let sortDir = "asc";
+  // Maps file prefix (name without .md) to its sort/order metadata.
+  // Built from every fetched file so nested section parents contribute their
+  // sort direction even when not public.
+  const sortDirMap = {};
 
   if (Array.isArray(data)) {
-    // Check parent file (e.g. cv.experience.md) for sort direction
-    if (prefix) {
-      const parentFile = data.find(({ name }) => name === `${prefix}.md`);
-      if (parentFile) {
-        const { data: parentData, status: parentStatus } = await app(
-          `GET /repos/adamsuk/dendron-daily/contents/${parentFile.path}`
-        );
-        if (parentStatus === 200) {
-          const parentParsed = parseMarkdownMetadata(parentData);
-          if (parentParsed.meta?.sort) {
-            sortDir = parentParsed.meta.sort;
-          }
-        }
-      }
-    }
-
     const matching = data.filter(
       ({ name }) =>
         (prefix ? name.startsWith(`${prefix}.`) : true) && name.endsWith(".md")
@@ -57,6 +44,14 @@ export const getMarkdown = async (app, prefix, res = []) => {
         );
         if (fileStatus === 200) {
           const parsed = parseMarkdownMetadata(fileData);
+
+          // Capture sort/order from every file for hierarchical sorting
+          const filePrefix = name.slice(0, -3);
+          const entry = {};
+          if (parsed.meta?.sort != null) entry.sort = parsed.meta.sort;
+          if (parsed.meta?.order != null) entry.order = parsed.meta.order;
+          if (Object.keys(entry).length > 0) sortDirMap[filePrefix] = entry;
+
           if (parsed.meta && parsed.meta.public === true) {
             const slug = parsed.meta.slug || name.replace(/\.md$/, "");
             res.push({ name, path, slug, ...parsed });
@@ -66,5 +61,5 @@ export const getMarkdown = async (app, prefix, res = []) => {
     );
   }
 
-  return { items: res, sortDir };
+  return { items: res, sortDirMap };
 };
