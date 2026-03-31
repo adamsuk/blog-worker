@@ -27,7 +27,25 @@ export const getMarkdown = async (app, prefix, res = []) => {
     `GET /repos/adamsuk/dendron-daily/contents/notes`
   );
 
+  let sortDir = "asc";
+
   if (Array.isArray(data)) {
+    // Check parent file (e.g. cv.experience.md) for sort direction
+    if (prefix) {
+      const parentFile = data.find(({ name }) => name === `${prefix}.md`);
+      if (parentFile) {
+        const { data: parentData, status: parentStatus } = await app(
+          `GET /repos/adamsuk/dendron-daily/contents/${parentFile.path}`
+        );
+        if (parentStatus === 200) {
+          const parentParsed = parseMarkdownMetadata(parentData);
+          if (parentParsed.meta?.sort) {
+            sortDir = parentParsed.meta.sort;
+          }
+        }
+      }
+    }
+
     const matching = data.filter(
       ({ name }) =>
         (prefix ? name.startsWith(`${prefix}.`) : true) && name.endsWith(".md")
@@ -48,5 +66,5 @@ export const getMarkdown = async (app, prefix, res = []) => {
     );
   }
 
-  return res;
+  return { items: res, sortDir };
 };

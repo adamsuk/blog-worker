@@ -35,11 +35,27 @@ export default {
 
     router.get("/api/:path*", async ({ params }) => {
       try {
-        var res = await getMarkdown(app, params.path);
+        const { items, sortDir } = await getMarkdown(app, params.path);
 
-        res.sort((a, b) => a.path.localeCompare(b.path));
+        items.sort((a, b) => {
+          const aOrder = a.meta?.order ?? null;
+          const bOrder = b.meta?.order ?? null;
 
-        return new Response(JSON.stringify(res), {
+          let cmp;
+          if (aOrder !== null && bOrder !== null) {
+            cmp = aOrder - bOrder;
+          } else if (aOrder !== null) {
+            cmp = -1;
+          } else if (bOrder !== null) {
+            cmp = 1;
+          } else {
+            cmp = a.path.localeCompare(b.path);
+          }
+
+          return sortDir === "desc" ? -cmp : cmp;
+        });
+
+        return new Response(JSON.stringify(items), {
           headers: { "content-type": "application/json", ...corsHeaders },
         });
       } catch (error) {
