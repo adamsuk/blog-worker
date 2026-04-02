@@ -8,7 +8,8 @@ export default {
     const origin = req.headers.get("Origin") || "";
     const allowedOrigin =
       origin === env.UI_URL ||
-      /^https:\/\/([^.]+\.)?sradams-co-uk-content\.pages\.dev$/.test(origin)
+      /^https:\/\/([^.]+\.)?sradams-co-uk-content\.pages\.dev$/.test(origin) ||
+      /^https:\/\/[a-z0-9][a-z0-9-]*-\d+\.app\.github\.dev$/i.test(origin)
         ? origin
         : env.UI_URL;
     const corsHeaders = {
