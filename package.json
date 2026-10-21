@@ -75,7 +75,8 @@
     "wrangler": "^3.13.2"
   },
   "scripts": {
-    "dev": "npx wrangler@beta dev"
+    "dev": "npx wrangler@beta dev",
+    "test": "node --test test/*.test.js"
   },
   "version": "0.8.0"
 }

@@ -1,7 +1,7 @@
 import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
 import Router from "./router";
-import { getMarkdown } from "./utils";
+import { getCached, handleWebhook } from "./cache";
 
 export default {
   async fetch(req, env) {
@@ -16,9 +16,19 @@ export default {
       "Access-Control-Allow-Origin": allowedOrigin,
       "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
       "Access-Control-Max-Age": "86400",
+      Vary: "Origin",
     };
+    const json = (body, status = 200, extra = {}) =>
+      new Response(typeof body === "string" ? body : JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json", ...corsHeaders, ...extra },
+      });
 
     const url = new URL(req.url);
+
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
 
     // wrangler secrets
     const appId = env.APP_ID;
@@ -29,6 +39,8 @@ export default {
 
     // instantiate app
     // https://github.com/octokit/req.js/#authentication
+    // The installation token is only requested when GitHub is actually called, which
+    // with the KV cache is only on revalidation.
     const auth = createAppAuth({
       appId,
       privateKey,
@@ -40,95 +52,35 @@ export default {
       mediaType: { format: "raw" },
     });
 
-    router.get("/api/:path*", async ({ params }) => {
+    // GitHub push webhook from dendron-daily: marks the cache stale when notes change.
+    router.post("/webhook/github", async () => {
+      if (!env.WEBHOOK_SECRET || !env.BLOG_CACHE) {
+        return json({ error: "webhook not configured" }, 503);
+      }
       try {
-        const { items, sortDirMap } = await getMarkdown(app, params.path);
-        const prefix = params.path;
-
-        // Returns the first path segment below the base prefix (the "root section"),
-        // and whether this item IS that section header (a direct child of prefix).
-        // e.g. prefix="cv", name="cv.experience.job1.md"
-        //   → { rootSection: "experience", isDirectChild: false }
-        // e.g. prefix="cv", name="cv.experience.md"
-        //   → { rootSection: "experience", isDirectChild: true }
-        function segInfo(name) {
-          const noMd = name.slice(0, -3);
-          const after = prefix ? noMd.slice(prefix.length + 1) : noMd;
-          const dot = after.indexOf(".");
-          return dot === -1
-            ? { rootSection: after, isDirectChild: true }
-            : { rootSection: after.slice(0, dot), isDirectChild: false };
-        }
-
-        function orderCmp(aOrder, bOrder, aItem, bItem) {
-          if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
-          if (aOrder !== null) return -1;
-          if (bOrder !== null) return 1;
-          return aItem.path.localeCompare(bItem.path);
-        }
-
-        items.sort((a, b) => {
-          const ai = segInfo(a.name);
-          const bi = segInfo(b.name);
-
-          if (ai.rootSection !== bi.rootSection) {
-            // Cross-section: sort sections by their own order field
-            const aKey = prefix ? `${prefix}.${ai.rootSection}` : ai.rootSection;
-            const bKey = prefix ? `${prefix}.${bi.rootSection}` : bi.rootSection;
-            const aOrder = sortDirMap[aKey]?.order ?? null;
-            const bOrder = sortDirMap[bKey]?.order ?? null;
-            const topDir = sortDirMap[prefix]?.sort || "asc";
-            const cmp = orderCmp(aOrder, bOrder, a, b);
-            return topDir === "desc" ? -cmp : cmp;
-          }
-
-          // Same section: section header always appears before its children
-          if (ai.isDirectChild !== bi.isDirectChild) {
-            return ai.isDirectChild ? -1 : 1;
-          }
-
-          // Same section, same depth: sort by order using this section's sort direction
-          const sectionKey = prefix
-            ? `${prefix}.${ai.rootSection}`
-            : ai.rootSection;
-          const dir = ai.isDirectChild
-            ? sortDirMap[prefix]?.sort || "asc"
-            : sortDirMap[sectionKey]?.sort || "asc";
-          const cmp = orderCmp(
-            a.meta?.order ?? null,
-            b.meta?.order ?? null,
-            a,
-            b
-          );
-          return dir === "desc" ? -cmp : cmp;
-        });
-
-        return new Response(JSON.stringify(items), {
-          headers: { "content-type": "application/json", ...corsHeaders },
-        });
+        const { status, body } = await handleWebhook(req, env);
+        return json(body, status);
       } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 500,
-          headers: { "content-type": "application/json", ...corsHeaders },
-        });
+        return json({ error: error.message }, 400);
       }
     });
 
-    if (url.pathname.startsWith("/api/")) {
-      return router.handle(req);
-    } else {
+    router.get("/api/:path*", async ({ params }) => {
       try {
-        return new Response(`{ "ok": true }`, {
-          headers: { "content-type": "application/json", ...corsHeaders },
+        const { body, cache } = await getCached(app, env.BLOG_CACHE, params.path);
+        return json(body, 200, {
+          "Cache-Control":
+            cache === "STALE" ? "public, max-age=30" : "public, max-age=60",
+          "X-Cache": cache,
         });
       } catch (error) {
-        app.log.error(error);
-
-        return new Response(`{ "error": "${error.message}" }`, {
-          status: 500,
-          headers: { "content-type": "application/json", ...corsHeaders },
-        });
+        return json({ error: error.message }, 500, { "Cache-Control": "no-store" });
       }
+    });
+
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/webhook/")) {
+      return (await router.handle(req)) || json({ error: "not found" }, 404);
     }
+    return json(`{ "ok": true }`);
   },
 };

@@ -8,3 +8,8 @@ node_compat = true
 
 [vars]
 UI_URL = "https://sradams.co.uk"
+
+# Cache for GitHub-derived responses (see cache.js)
+[[kv_namespaces]]
+binding = "BLOG_CACHE"
+id = "4d893e2af99042f0960b7a241cf5d93e"
