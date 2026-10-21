@@ -21,45 +21,65 @@ export const parseMarkdownMetadata = (markdown) => {
   return { meta, content };
 };
 
-// Fetch markdown files from the flat notes/ directory in dendron-daily, filtered by prefix
-export const getMarkdown = async (app, prefix, res = []) => {
-  const { data, status } = await app(
-    `GET /repos/adamsuk/dendron-daily/contents/notes`
-  );
-
-  // Maps file prefix (name without .md) to its sort/order metadata.
-  // Built from every fetched file so nested section parents contribute their
-  // sort direction even when not public.
-  const sortDirMap = {};
-
-  if (Array.isArray(data)) {
-    const matching = data.filter(
-      ({ name }) =>
-        (prefix ? name.startsWith(`${prefix}.`) : true) && name.endsWith(".md")
-    );
-    await Promise.all(
-      matching.map(async ({ name, path }) => {
-        const { data: fileData, status: fileStatus } = await app(
-          `GET /repos/adamsuk/dendron-daily/contents/${path}`
-        );
-        if (fileStatus === 200) {
-          const parsed = parseMarkdownMetadata(fileData);
-
-          // Capture sort/order from every file for hierarchical sorting
-          const filePrefix = name.slice(0, -3);
-          const entry = {};
-          if (parsed.meta?.sort != null) entry.sort = parsed.meta.sort;
-          if (parsed.meta?.order != null) entry.order = parsed.meta.order;
-          if (Object.keys(entry).length > 0) sortDirMap[filePrefix] = entry;
-
-          if (parsed.meta && parsed.meta.public === true) {
-            const slug = parsed.meta.slug || name.replace(/\.md$/, "");
-            res.push({ name, path, slug, ...parsed });
-          }
-        }
-      })
-    );
+// Sort items hierarchically by section order and each section's sort direction.
+// Moved unchanged from worker.js.
+export const sortItems = (items, sortDirMap, prefix) => {
+  // Returns the first path segment below the base prefix (the "root section"),
+  // and whether this item IS that section header (a direct child of prefix).
+  // e.g. prefix="cv", name="cv.experience.job1.md"
+  //   → { rootSection: "experience", isDirectChild: false }
+  // e.g. prefix="cv", name="cv.experience.md"
+  //   → { rootSection: "experience", isDirectChild: true }
+  function segInfo(name) {
+    const noMd = name.slice(0, -3);
+    const after = prefix ? noMd.slice(prefix.length + 1) : noMd;
+    const dot = after.indexOf(".");
+    return dot === -1
+      ? { rootSection: after, isDirectChild: true }
+      : { rootSection: after.slice(0, dot), isDirectChild: false };
   }
 
-  return { items: res, sortDirMap };
+  function orderCmp(aOrder, bOrder, aItem, bItem) {
+    if (aOrder !== null && bOrder !== null) return aOrder - bOrder;
+    if (aOrder !== null) return -1;
+    if (bOrder !== null) return 1;
+    return aItem.path.localeCompare(bItem.path);
+  }
+
+  items.sort((a, b) => {
+    const ai = segInfo(a.name);
+    const bi = segInfo(b.name);
+
+    if (ai.rootSection !== bi.rootSection) {
+      // Cross-section: sort sections by their own order field
+      const aKey = prefix ? `${prefix}.${ai.rootSection}` : ai.rootSection;
+      const bKey = prefix ? `${prefix}.${bi.rootSection}` : bi.rootSection;
+      const aOrder = sortDirMap[aKey]?.order ?? null;
+      const bOrder = sortDirMap[bKey]?.order ?? null;
+      const topDir = sortDirMap[prefix]?.sort || "asc";
+      const cmp = orderCmp(aOrder, bOrder, a, b);
+      return topDir === "desc" ? -cmp : cmp;
+    }
+
+    // Same section: section header always appears before its children
+    if (ai.isDirectChild !== bi.isDirectChild) {
+      return ai.isDirectChild ? -1 : 1;
+    }
+
+    // Same section, same depth: sort by order using this section's sort direction
+    const sectionKey = prefix
+      ? `${prefix}.${ai.rootSection}`
+      : ai.rootSection;
+    const dir = ai.isDirectChild
+      ? sortDirMap[prefix]?.sort || "asc"
+      : sortDirMap[sectionKey]?.sort || "asc";
+    const cmp = orderCmp(
+      a.meta?.order ?? null,
+      b.meta?.order ?? null,
+      a,
+      b
+    );
+    return dir === "desc" ? -cmp : cmp;
+  });
+  return items;
 };

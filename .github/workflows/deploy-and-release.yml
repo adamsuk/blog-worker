@@ -17,10 +17,15 @@ jobs:
         with:
           node-version: 20
       - run: npm install
+      - run: npm test
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
+          secrets: |
+            WEBHOOK_SECRET
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
       - name: Release
         run: npx semantic-release
         env:
