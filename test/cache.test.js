@@ -203,3 +203,31 @@ test("a prefix picks up its own changes after another prefix refreshed the listi
   assert.notEqual(cvAfter.body, cvBefore.body);
   assert.equal(JSON.parse(cvAfter.body)[0].meta.title, "CV v2");
 });
+
+test("ignores responses cached by the pre-fix code (old body stored with the new sig)", async () => {
+  const kv = fakeKV();
+  const gh = fakeGitHub(baseFiles());
+  // What the old 304 path left behind: a stale body saved with the current signature.
+  const poisoned = JSON.stringify([{ name: "cv.x.md", slug: "cv.x", meta: { title: "OLD CV" } }]);
+  kv.store.set(
+    "resp:cv",
+    JSON.stringify({ body: poisoned, sig: "cv.x.md@s3", gen: "0", fetchedAt: 0 })
+  );
+
+  const r = await getCached(gh.app, kv, "cv", TTL_MS + 1);
+  assert.notEqual(r.body, poisoned);
+  assert.equal(JSON.parse(r.body)[0].meta.title, "CV");
+});
+
+test("no request path can make the old code write a key the new code reads", async () => {
+  const kv = fakeKV();
+  const gh = fakeGitHub(baseFiles());
+  // The old worker stored /api/<path> under `resp:<path>`, so a request for e.g.
+  // /api/v2:cv wrote `resp:v2:cv`. Seed every such shape with an empty, fresh body.
+  for (const k of ["resp:v2:cv", "resp:2:cv", "resp:cv"]) {
+    kv.store.set(k, JSON.stringify({ body: "[]", sig: "cv.x.md@s3", gen: "0", fetchedAt: 0 }));
+  }
+  const r = await getCached(gh.app, kv, "cv", 1);
+  assert.equal(r.cache, "MISS");
+  assert.equal(JSON.parse(r.body)[0].meta.title, "CV");
+});

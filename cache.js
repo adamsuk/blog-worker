@@ -6,7 +6,7 @@ import { parseMarkdownMetadata, sortItems } from "./utils.js";
 //   gen            - cache generation, bumped by the GitHub push webhook
 //   listing:notes  - { etag, gen, entries: [{ name, path, sha }] } for notes/
 //   blob:<sha>     - raw markdown for one file version (immutable)
-//   resp:<prefix>  - { body, sig, gen, fetchedAt } for /api/<prefix>
+//   resp2:<prefix> - { body, sig, gen, fetchedAt } for /api/<prefix>
 //
 // A response is served from KV while its gen matches and it is younger than TTL_MS.
 // After that the notes listing is revalidated with If-None-Match (a 304 doesn't count
@@ -18,7 +18,11 @@ export const GEN_KEY = "gen";
 export const LISTING_KEY = "listing:notes";
 const REPO = "/repos/adamsuk/dendron-daily";
 
-const respKey = (prefix) => `resp:${prefix || ""}`;
+// resp2: responses stored before the 304 fix (#9) can hold an old body under the current
+// sig, which no revalidation would ever replace; a new key namespace drops them all. It
+// must not start with `resp:`, or a request like /api/v2:cv to the old code could have
+// written a key the new code reads.
+const respKey = (prefix) => `resp2:${prefix || ""}`;
 
 // KV allows one write per key per second; a failed cache write must never fail a request.
 const safePut = async (kv, key, value) => {
