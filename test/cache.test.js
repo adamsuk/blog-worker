@@ -185,3 +185,21 @@ test("verifySignature and pushTouchesNotes edge cases", async () => {
   assert.equal(await verifySignature("", "x", sign("", "x")), false);
   assert.equal(pushTouchesNotes({ ...pushPayload(["notes/a.md"]), ref: "refs/heads/dev" }), false);
 });
+
+test("a prefix picks up its own changes after another prefix refreshed the listing", async () => {
+  const kv = fakeKV();
+  const files = baseFiles();
+  const gh = fakeGitHub(files);
+  const cvBefore = await getCached(gh.app, kv, "cv", 0);
+  await getCached(gh.app, kv, "blog", 0);
+
+  // A cv note changes. /blog revalidates first (e.g. the site's scheduled build check)
+  // and stores the new listing + ETag; /cv then revalidates and gets a 304 on the listing.
+  files["cv.x.md"] = { sha: "s3b", text: md({ title: "CV v2", public: true }) };
+  await getCached(gh.app, kv, "blog", TTL_MS + 1);
+  const cvAfter = await getCached(gh.app, kv, "cv", TTL_MS + 2);
+
+  assert.equal(cvAfter.cache, "REVALIDATED");
+  assert.notEqual(cvAfter.body, cvBefore.body);
+  assert.equal(JSON.parse(cvAfter.body)[0].meta.title, "CV v2");
+});
