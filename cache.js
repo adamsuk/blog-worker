@@ -108,10 +108,13 @@ const signature = (prefix, entries) =>
 const inflight = new Map();
 
 const revalidate = async (app, kv, prefix, gen, entry, now) => {
-  const { entries, notModified } = await fetchListing(app, kv, gen);
+  const { entries } = await fetchListing(app, kv, gen);
   const sig = signature(prefix, entries);
   let body;
-  if (entry && (notModified || entry.sig === sig)) {
+  // Decide by this prefix's own file shas, not the listing's 304: the listing and its
+  // ETag are shared by every prefix, so a 304 only means nothing changed since *some*
+  // prefix last fetched it, which may have been after this prefix's files changed.
+  if (entry && entry.sig === sig) {
     body = entry.body;
   } else {
     body = JSON.stringify(await buildItems(app, kv, prefix, entries));
