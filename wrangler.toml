@@ -4,7 +4,7 @@ workers_dev = true
 
 main = "worker.js"
 compatibility_date = "2020-12-17"
-node_compat = true
+compatibility_flags = ["nodejs_compat"]
 
 [vars]
 UI_URL = "https://sradams.co.uk"
@@ -13,3 +13,17 @@ UI_URL = "https://sradams.co.uk"
 [[kv_namespaces]]
 binding = "BLOG_CACHE"
 id = "4d893e2af99042f0960b7a241cf5d93e"
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true
+
+[observability.issue_detection]
+enabled = true
