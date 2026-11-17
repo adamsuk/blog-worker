@@ -12,7 +12,7 @@
   },
   "engines": {
     "npm": ">=10.0.0",
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "release": {
     "branches": [
@@ -72,7 +72,7 @@
     "@semantic-release/release-notes-generator": "^12.0.0",
     "miniflare": "^2.14.0",
     "semantic-release": "^22.0.5",
-    "wrangler": "^3.13.2"
+    "wrangler": "^4.164.0"
   },
   "scripts": {
     "dev": "npx wrangler@beta dev",
