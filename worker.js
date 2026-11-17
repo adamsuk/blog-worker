@@ -2,16 +2,12 @@ import { createAppAuth } from "@octokit/auth-app";
 import { request } from "@octokit/request";
 import Router from "./router";
 import { getCached, handleWebhook } from "./cache";
+import { resolveAllowedOrigin } from "./cors";
 
 export default {
   async fetch(req, env) {
     const origin = req.headers.get("Origin") || "";
-    const allowedOrigin =
-      origin === env.UI_URL ||
-      /^https:\/\/([^.]+\.)?sradams-co-uk-content\.pages\.dev$/.test(origin) ||
-      /^https:\/\/[a-z0-9][a-z0-9-]*-\d+\.app\.github\.dev$/i.test(origin)
-        ? origin
-        : env.UI_URL;
+    const allowedOrigin = resolveAllowedOrigin(origin, env.UI_URL);
     const corsHeaders = {
       "Access-Control-Allow-Origin": allowedOrigin,
       "Access-Control-Allow-Methods": "GET,HEAD,POST,OPTIONS",
